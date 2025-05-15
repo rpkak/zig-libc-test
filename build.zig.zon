@@ -1,0 +1,17 @@
+.{
+    .name = .zig_libc_test,
+    .version = "0.0.0",
+    .fingerprint = 0xaf1644d5cd5ca5e9,
+    .minimum_zig_version = "0.15.0-dev.552+bc2f7c754",
+
+    .dependencies = .{
+        .libc_test = .{
+            .url = "http://nsz.repo.hu/git/?p=libc-test;a=snapshot;h=f2bac7711bec93467b73bec1465579ea0b8d5071;sf=tgz",
+            .hash = "N-V-__8AAPikfwDIfC1CVrl4uGQ-E2YaF3RPOFgdzAobXKzg",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
+}
