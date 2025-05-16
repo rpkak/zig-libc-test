@@ -399,6 +399,31 @@ pub fn build(b: *std.Build) void {
         installTestCase(b, test_step, exe);
     }
 
+    {
+        // tls_align-static
+        const test_mod = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        });
+
+        test_mod.addIncludePath(src.path(b, "common"));
+
+        test_mod.addCSourceFiles(.{
+            .root = src.path(b, "functional"),
+            .files = &.{ "tls_align.c", "tls_align_dso.c" },
+        });
+
+        test_mod.linkLibrary(libtest);
+
+        const exe = b.addExecutable(.{
+            .name = "tls_align-static",
+            .root_module = test_mod,
+        });
+
+        installTestCase(b, test_step, exe);
+    }
+
     // TODO
     // "functional/dlopen.c",
     // "functional/dlopen_dso.c"
