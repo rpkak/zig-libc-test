@@ -7,6 +7,7 @@ pub fn build(b: *std.Build) void {
     const src = b.dependency("libc_test", .{}).path("src");
 
     const libtest_mod = b.createModule(.{
+        .root_source_file = b.path("libtest.zig"),
         .target = target,
         .optimize = optimize,
         .link_libc = true,
@@ -15,14 +16,9 @@ pub fn build(b: *std.Build) void {
     libtest_mod.addCSourceFiles(.{
         .root = src.path(b, "common"),
         .files = &.{
-            "vmfill.c",
             "utf8.c",
-            "setrlim.c",
-            "rand.c",
             "print.c",
-            "path.c",
             "mtest.c",
-            "memfill.c",
             "fdfill.c",
         },
     });
