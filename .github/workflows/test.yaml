@@ -8,11 +8,58 @@ on:
     - cron: 0 0 * * 3,6
 jobs:
   test:
-    name: "Run libc-test on zig master"
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        optimize:
+          - Debug
+          - ReleaseFast
+        target:
+          - triple: aarch64-linux-musl
+            image: ubuntu-24.04-arm
+            qemu: false
+          - triple: aarch64_be-linux-musl
+            image: ubuntu-latest
+            qemu: true
+          - triple: hexagon-linux-musl
+            image: ubuntu-latest
+            qemu: true
+          - triple: loongarch64-linux-musl
+            image: ubuntu-latest
+            qemu: true
+          - triple: powerpc64-linux-musl
+            image: ubuntu-latest
+            qemu: true
+          - triple: powerpc64le-linux-musl
+            image: ubuntu-latest
+            qemu: true
+          - triple: riscv32-linux-musl
+            image: ubuntu-latest
+            qemu: true
+          - triple: riscv64-linux-musl
+            image: ubuntu-latest
+            qemu: true
+          - triple: s390x-linux-musl
+            image: ubuntu-latest
+            qemu: true
+          - triple: x86-linux-musl
+            image: ubuntu-latest
+            qemu: false
+          - triple: x86_64-linux-musl
+            image: ubuntu-latest
+            qemu: false
+          - triple: x86_64-linux-muslx32
+            image: ubuntu-latest
+            qemu: false
+    name: "Run libc-test ${{ matrix.optimize }} on ${{ matrix.target.triple }}"
+    runs-on: ${{ matrix.target.image }}
     steps:
-    - uses: actions/checkout@v3
     - uses: mlugg/setup-zig@v2
       with:
         version: master
-    - run: zig build test -Dtarget=x86_64-linux-musl --verbose --summary all
+    - uses: actions/checkout@v3
+    - name: Install QEMU
+      if: ${{ matrix.target.qemu }}
+      run: sudo apt-get install --yes qemu-user
+    - name: Run test cases
+      run: zig build test -fqemu -Dtarget=${{ matrix.target.triple }} -Doptimize=${{ matrix.optimize }} -Dskip-foreign-checks --verbose --summary all

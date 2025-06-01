@@ -7,71 +7,17 @@ const LibCTest = struct {
     src: std.Build.LazyPath,
     libtest: *std.Build.Step.Compile,
     test_step: *std.Build.Step,
-    no_skip: bool,
-};
-
-const Skip = struct {
-    always: bool = false,
-
-    release: bool = false,
-
-    x86: bool = false,
-    x86_64: bool = false,
-    x32: bool = false,
-
-    aarch64: bool = false,
-    aarch64_be: bool = false,
-
-    riscv: bool = false,
-    riscv32: bool = false,
-
-    powerpc64: bool = false,
-    powerpc64le: bool = false,
-
-    s390x: bool = false,
-
-    loongarch64: bool = false,
-
-    hexagon: bool = false,
-
-    big_endian: bool = false,
-
-    fn shouldSkip(skip: Skip, libc_test: *const LibCTest) bool {
-        if (libc_test.no_skip) return false;
-
-        if (skip.always) return true;
-
-        if (skip.release and libc_test.optimize != .Debug) return true;
-
-        if (skip.x86 and libc_test.target.result.cpu.arch.isX86()) return true;
-        if (skip.x86_64 and libc_test.target.result.cpu.arch == .x86_64) return true;
-        if (skip.x32 and libc_test.target.result.abi == .muslx32) return true;
-
-        if (skip.aarch64 and libc_test.target.result.cpu.arch.isAARCH64()) return true;
-        if (skip.aarch64_be and libc_test.target.result.cpu.arch == .aarch64_be) return true;
-
-        if (skip.riscv and libc_test.target.result.cpu.arch.isRISCV()) return true;
-        if (skip.riscv32 and libc_test.target.result.cpu.arch == .riscv32) return true;
-
-        if (skip.powerpc64 and libc_test.target.result.cpu.arch.isPowerPC64()) return true;
-        if (skip.powerpc64le and libc_test.target.result.cpu.arch == .powerpc64le) return true;
-
-        if (skip.s390x and libc_test.target.result.cpu.arch == .s390x) return true;
-
-        if (skip.loongarch64 and libc_test.target.result.cpu.arch == .loongarch64) return true;
-
-        if (skip.hexagon and libc_test.target.result.cpu.arch == .hexagon) return true;
-
-        if (skip.big_endian and libc_test.target.result.cpu.arch.endian() == .big) return true;
-        return false;
-    }
+    unstable: bool,
+    skip_foreign_checks: bool,
 };
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{ .default_target = .{ .abi = .musl } });
     const optimize = b.standardOptimizeOption(.{});
 
-    const no_skip = b.option(bool, "no-skip", "Do not skip failing test cases") orelse false;
+    const unstable = b.option(bool, "unstable", "Do not skip test cases, which fail sometimes") orelse false;
+
+    const skip_foreign_checks = b.option(bool, "skip-foreign-checks", "Skip foreign checks") orelse false;
 
     const src = b.dependency("libc_test", .{}).path("src");
 
@@ -106,349 +52,350 @@ pub fn build(b: *std.Build) void {
         .src = src,
         .libtest = libtest,
         .test_step = test_step,
-        .no_skip = no_skip,
+        .unstable = unstable,
+        .skip_foreign_checks = skip_foreign_checks,
     };
 
-    installSimpleTestCase(&libc_test, "api/main.c", .{});
+    installSimpleTestCase(&libc_test, "api/main.c", false, false);
 
-    installSimpleTestCase(&libc_test, "functional/argv.c", .{});
-    installSimpleTestCase(&libc_test, "functional/basename.c", .{});
-    installSimpleTestCase(&libc_test, "functional/clocale_mbfuncs.c", .{});
-    installSimpleTestCase(&libc_test, "functional/clock_gettime.c", .{});
-    installSimpleTestCase(&libc_test, "functional/crypt.c", .{});
-    installSimpleTestCase(&libc_test, "functional/dirname.c", .{});
-    installSimpleTestCase(&libc_test, "functional/env.c", .{});
-    installSimpleTestCase(&libc_test, "functional/fcntl.c", .{});
-    installSimpleTestCase(&libc_test, "functional/fdopen.c", .{});
-    installSimpleTestCase(&libc_test, "functional/fnmatch.c", .{});
-    installSimpleTestCase(&libc_test, "functional/fscanf.c", .{});
-    installSimpleTestCase(&libc_test, "functional/fwscanf.c", .{});
-    installSimpleTestCase(&libc_test, "functional/iconv_open.c", .{});
-    installSimpleTestCase(&libc_test, "functional/inet_pton.c", .{});
-    installSimpleTestCase(&libc_test, "functional/ipc_msg.c", .{ .big_endian = true, .x32 = true });
-    installSimpleTestCase(&libc_test, "functional/ipc_sem.c", .{ .aarch64_be = true, .s390x = true });
-    installSimpleTestCase(&libc_test, "functional/ipc_shm.c", .{ .aarch64_be = true, .s390x = true });
-    installSimpleTestCase(&libc_test, "functional/mbc.c", .{});
-    installSimpleTestCase(&libc_test, "functional/memstream.c", .{});
-    installSimpleTestCase(&libc_test, "functional/mntent.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "functional/popen.c", .{});
-    installSimpleTestCase(&libc_test, "functional/pthread_cancel.c", .{});
-    installSimpleTestCase(&libc_test, "functional/pthread_cancel-points.c", .{});
-    installSimpleTestCase(&libc_test, "functional/pthread_cond.c", .{});
-    installSimpleTestCase(&libc_test, "functional/pthread_mutex.c", .{});
-    installSimpleTestCase(&libc_test, "functional/pthread_mutex_pi.c", .{ .big_endian = true });
-    installSimpleTestCase(&libc_test, "functional/pthread_robust.c", .{ .powerpc64 = true, .aarch64 = true, .s390x = true, .riscv = true, .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "functional/pthread_tsd.c", .{});
-    installSimpleTestCase(&libc_test, "functional/qsort.c", .{});
-    installSimpleTestCase(&libc_test, "functional/random.c", .{});
-    installSimpleTestCase(&libc_test, "functional/search_hsearch.c", .{});
-    installSimpleTestCase(&libc_test, "functional/search_insque.c", .{});
-    installSimpleTestCase(&libc_test, "functional/search_lsearch.c", .{});
-    installSimpleTestCase(&libc_test, "functional/search_tsearch.c", .{});
-    installSimpleTestCase(&libc_test, "functional/sem_init.c", .{});
-    installSimpleTestCase(&libc_test, "functional/sem_open.c", .{});
-    installSimpleTestCase(&libc_test, "functional/setjmp.c", .{});
-    installSimpleTestCase(&libc_test, "functional/snprintf.c", .{});
-    installSimpleTestCase(&libc_test, "functional/socket.c", .{});
-    installSimpleTestCase(&libc_test, "functional/spawn.c", .{});
-    installSimpleTestCase(&libc_test, "functional/sscanf.c", .{});
-    installSimpleTestCase(&libc_test, "functional/sscanf_long.c", .{});
-    installSimpleTestCase(&libc_test, "functional/stat.c", .{});
-    installSimpleTestCase(&libc_test, "functional/strftime.c", .{});
-    installSimpleTestCase(&libc_test, "functional/string.c", .{});
-    installSimpleTestCase(&libc_test, "functional/string_memcpy.c", .{});
-    installSimpleTestCase(&libc_test, "functional/string_memmem.c", .{});
-    installSimpleTestCase(&libc_test, "functional/string_memset.c", .{});
-    installSimpleTestCase(&libc_test, "functional/string_strchr.c", .{});
-    installSimpleTestCase(&libc_test, "functional/string_strcspn.c", .{});
-    installSimpleTestCase(&libc_test, "functional/string_strstr.c", .{});
-    installSimpleTestCase(&libc_test, "functional/strptime.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "functional/strtod.c", .{});
-    installSimpleTestCase(&libc_test, "functional/strtod_long.c", .{});
-    installSimpleTestCase(&libc_test, "functional/strtod_simple.c", .{});
-    installSimpleTestCase(&libc_test, "functional/strtof.c", .{});
-    installSimpleTestCase(&libc_test, "functional/strtol.c", .{});
-    installSimpleTestCase(&libc_test, "functional/strtold.c", .{});
-    installSimpleTestCase(&libc_test, "functional/swprintf.c", .{});
-    installSimpleTestCase(&libc_test, "functional/tgmath.c", .{});
-    installSimpleTestCase(&libc_test, "functional/time.c", .{});
-    installTlsAlignStaticTestCase(&libc_test, .{});
-    installSimpleTestCase(&libc_test, "functional/tls_init.c", .{});
-    installSimpleTestCase(&libc_test, "functional/tls_local_exec.c", .{});
-    installSimpleTestCase(&libc_test, "functional/udiv.c", .{});
-    installSimpleTestCase(&libc_test, "functional/ungetc.c", .{});
-    installSimpleTestCase(&libc_test, "functional/utime.c", .{});
-    installSimpleTestCase(&libc_test, "functional/vfork.c", .{});
-    installSimpleTestCase(&libc_test, "functional/wcsstr.c", .{});
-    installSimpleTestCase(&libc_test, "functional/wcstol.c", .{});
+    installSimpleTestCase(&libc_test, "functional/argv.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/basename.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/clocale_mbfuncs.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/clock_gettime.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/crypt.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/dirname.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/env.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/fcntl.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/fdopen.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/fnmatch.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/fscanf.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/fwscanf.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/iconv_open.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/inet_pton.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/ipc_msg.c", true, false);
+    installSimpleTestCase(&libc_test, "functional/ipc_sem.c", true, false);
+    installSimpleTestCase(&libc_test, "functional/ipc_shm.c", true, false);
+    installSimpleTestCase(&libc_test, "functional/mbc.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/memstream.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/mntent.c", true, false);
+    installSimpleTestCase(&libc_test, "functional/popen.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/pthread_cancel.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/pthread_cancel-points.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/pthread_cond.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/pthread_mutex.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/pthread_mutex_pi.c", true, false);
+    installSimpleTestCase(&libc_test, "functional/pthread_robust.c", true, false);
+    installSimpleTestCase(&libc_test, "functional/pthread_tsd.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/qsort.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/random.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/search_hsearch.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/search_insque.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/search_lsearch.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/search_tsearch.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/sem_init.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/sem_open.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/setjmp.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/snprintf.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/socket.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/spawn.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/sscanf.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/sscanf_long.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/stat.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/strftime.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/string.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/string_memcpy.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/string_memmem.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/string_memset.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/string_strchr.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/string_strcspn.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/string_strstr.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/strptime.c", true, false);
+    installSimpleTestCase(&libc_test, "functional/strtod.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/strtod_long.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/strtod_simple.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/strtof.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/strtol.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/strtold.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/swprintf.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/tgmath.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/time.c", false, false);
+    installTlsAlignStaticTestCase(&libc_test, false, false);
+    installSimpleTestCase(&libc_test, "functional/tls_init.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/tls_local_exec.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/udiv.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/ungetc.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/utime.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/vfork.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/wcsstr.c", false, false);
+    installSimpleTestCase(&libc_test, "functional/wcstol.c", false, false);
 
-    installSimpleTestCase(&libc_test, "math/acos.c", .{});
-    installSimpleTestCase(&libc_test, "math/acosf.c", .{});
-    installSimpleTestCase(&libc_test, "math/acosh.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/acoshf.c", .{});
-    installSimpleTestCase(&libc_test, "math/acoshl.c", .{ .powerpc64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/acosl.c", .{});
-    installSimpleTestCase(&libc_test, "math/asin.c", .{});
-    installSimpleTestCase(&libc_test, "math/asinf.c", .{});
-    installSimpleTestCase(&libc_test, "math/asinh.c", .{ .powerpc64 = true, .x86_64 = true, .aarch64 = true, .s390x = true, .riscv = true, .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/asinhf.c", .{});
-    installSimpleTestCase(&libc_test, "math/asinhl.c", .{ .powerpc64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/asinl.c", .{});
-    installSimpleTestCase(&libc_test, "math/atan2.c", .{});
-    installSimpleTestCase(&libc_test, "math/atan2f.c", .{});
-    installSimpleTestCase(&libc_test, "math/atan2l.c", .{});
-    installSimpleTestCase(&libc_test, "math/atan.c", .{});
-    installSimpleTestCase(&libc_test, "math/atanf.c", .{});
-    installSimpleTestCase(&libc_test, "math/atanh.c", .{});
-    installSimpleTestCase(&libc_test, "math/atanhf.c", .{});
-    installSimpleTestCase(&libc_test, "math/atanhl.c", .{});
-    installSimpleTestCase(&libc_test, "math/atanl.c", .{});
-    installSimpleTestCase(&libc_test, "math/cbrt.c", .{});
-    installSimpleTestCase(&libc_test, "math/cbrtf.c", .{});
-    installSimpleTestCase(&libc_test, "math/cbrtl.c", .{});
-    installSimpleTestCase(&libc_test, "math/ceil.c", .{});
-    installSimpleTestCase(&libc_test, "math/ceilf.c", .{});
-    installSimpleTestCase(&libc_test, "math/ceill.c", .{});
-    installSimpleTestCase(&libc_test, "math/copysign.c", .{});
-    installSimpleTestCase(&libc_test, "math/copysignf.c", .{});
-    installSimpleTestCase(&libc_test, "math/copysignl.c", .{});
-    installSimpleTestCase(&libc_test, "math/cos.c", .{});
-    installSimpleTestCase(&libc_test, "math/cosf.c", .{});
-    installSimpleTestCase(&libc_test, "math/cosh.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/coshf.c", .{});
-    installSimpleTestCase(&libc_test, "math/coshl.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/cosl.c", .{});
-    installSimpleTestCase(&libc_test, "math/drem.c", .{});
-    installSimpleTestCase(&libc_test, "math/dremf.c", .{});
-    installSimpleTestCase(&libc_test, "math/erf.c", .{});
-    installSimpleTestCase(&libc_test, "math/erfc.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/erfcf.c", .{});
-    installSimpleTestCase(&libc_test, "math/erfcl.c", .{ .powerpc64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/erff.c", .{});
-    installSimpleTestCase(&libc_test, "math/erfl.c", .{});
-    installSimpleTestCase(&libc_test, "math/exp10.c", .{});
-    installSimpleTestCase(&libc_test, "math/exp10f.c", .{});
-    installSimpleTestCase(&libc_test, "math/exp10l.c", .{});
-    installSimpleTestCase(&libc_test, "math/exp2.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/exp2f.c", .{});
-    installSimpleTestCase(&libc_test, "math/exp2l.c", .{ .powerpc64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/exp.c", .{});
-    installSimpleTestCase(&libc_test, "math/expf.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/expl.c", .{});
-    installSimpleTestCase(&libc_test, "math/expm1.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/expm1f.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/expm1l.c", .{ .x86 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/fabs.c", .{});
-    installSimpleTestCase(&libc_test, "math/fabsf.c", .{});
-    installSimpleTestCase(&libc_test, "math/fabsl.c", .{});
-    installSimpleTestCase(&libc_test, "math/fdim.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/fdimf.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/fdiml.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/fenv.c", .{});
-    installSimpleTestCase(&libc_test, "math/floor.c", .{});
-    installSimpleTestCase(&libc_test, "math/floorf.c", .{});
-    installSimpleTestCase(&libc_test, "math/floorl.c", .{});
-    installSimpleTestCase(&libc_test, "math/fma.c", .{ .x86 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/fmaf.c", .{});
-    installSimpleTestCase(&libc_test, "math/fmal.c", .{ .x86 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/fmax.c", .{});
-    installSimpleTestCase(&libc_test, "math/fmaxf.c", .{});
-    installSimpleTestCase(&libc_test, "math/fmaxl.c", .{});
-    installSimpleTestCase(&libc_test, "math/fmin.c", .{});
-    installSimpleTestCase(&libc_test, "math/fminf.c", .{});
-    installSimpleTestCase(&libc_test, "math/fminl.c", .{});
-    installSimpleTestCase(&libc_test, "math/fmod.c", .{});
-    installSimpleTestCase(&libc_test, "math/fmodf.c", .{});
-    installSimpleTestCase(&libc_test, "math/fmodl.c", .{});
-    installSimpleTestCase(&libc_test, "math/fpclassify.c", .{});
-    installSimpleTestCase(&libc_test, "math/frexp.c", .{});
-    installSimpleTestCase(&libc_test, "math/frexpf.c", .{});
-    installSimpleTestCase(&libc_test, "math/frexpl.c", .{});
-    installSimpleTestCase(&libc_test, "math/hypot.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/hypotf.c", .{});
-    installSimpleTestCase(&libc_test, "math/hypotl.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/ilogb.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/ilogbf.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/ilogbl.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/isless.c", .{});
-    installSimpleTestCase(&libc_test, "math/j0.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/j0f.c", .{});
-    installSimpleTestCase(&libc_test, "math/j1.c", .{});
-    installSimpleTestCase(&libc_test, "math/j1f.c", .{});
-    installSimpleTestCase(&libc_test, "math/jn.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/jnf.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/ldexp.c", .{});
-    installSimpleTestCase(&libc_test, "math/ldexpf.c", .{});
-    installSimpleTestCase(&libc_test, "math/ldexpl.c", .{});
-    installSimpleTestCase(&libc_test, "math/lgamma.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/lgammaf.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/lgammaf_r.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/lgammal.c", .{ .powerpc64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/lgammal_r.c", .{});
-    installSimpleTestCase(&libc_test, "math/lgamma_r.c", .{});
-    installSimpleTestCase(&libc_test, "math/llrint.c", .{ .riscv32 = true });
-    installSimpleTestCase(&libc_test, "math/llrintf.c", .{ .riscv32 = true });
-    installSimpleTestCase(&libc_test, "math/llrintl.c", .{});
-    installSimpleTestCase(&libc_test, "math/llround.c", .{ .riscv32 = true });
-    installSimpleTestCase(&libc_test, "math/llroundf.c", .{ .riscv32 = true });
-    installSimpleTestCase(&libc_test, "math/llroundl.c", .{});
-    installSimpleTestCase(&libc_test, "math/log10.c", .{});
-    installSimpleTestCase(&libc_test, "math/log10f.c", .{});
-    installSimpleTestCase(&libc_test, "math/log10l.c", .{});
-    installSimpleTestCase(&libc_test, "math/log1p.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/log1pf.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/log1pl.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/log2.c", .{});
-    installSimpleTestCase(&libc_test, "math/log2f.c", .{});
-    installSimpleTestCase(&libc_test, "math/log2l.c", .{});
-    installSimpleTestCase(&libc_test, "math/logb.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/logbf.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/logbl.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/log.c", .{});
-    installSimpleTestCase(&libc_test, "math/logf.c", .{});
-    installSimpleTestCase(&libc_test, "math/logl.c", .{});
-    installSimpleTestCase(&libc_test, "math/lrint.c", .{});
-    installSimpleTestCase(&libc_test, "math/lrintf.c", .{});
-    installSimpleTestCase(&libc_test, "math/lrintl.c", .{});
-    installSimpleTestCase(&libc_test, "math/lround.c", .{});
-    installSimpleTestCase(&libc_test, "math/lroundf.c", .{});
-    installSimpleTestCase(&libc_test, "math/lroundl.c", .{});
-    installSimpleTestCase(&libc_test, "math/modf.c", .{});
-    installSimpleTestCase(&libc_test, "math/modff.c", .{});
-    installSimpleTestCase(&libc_test, "math/modfl.c", .{});
-    installSimpleTestCase(&libc_test, "math/nearbyint.c", .{});
-    installSimpleTestCase(&libc_test, "math/nearbyintf.c", .{});
-    installSimpleTestCase(&libc_test, "math/nearbyintl.c", .{});
-    installSimpleTestCase(&libc_test, "math/nextafter.c", .{});
-    installSimpleTestCase(&libc_test, "math/nextafterf.c", .{});
-    installSimpleTestCase(&libc_test, "math/nextafterl.c", .{});
-    installSimpleTestCase(&libc_test, "math/nexttoward.c", .{});
-    installSimpleTestCase(&libc_test, "math/nexttowardf.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/nexttowardl.c", .{});
-    installSimpleTestCase(&libc_test, "math/pow10.c", .{});
-    installSimpleTestCase(&libc_test, "math/pow10f.c", .{});
-    installSimpleTestCase(&libc_test, "math/pow10l.c", .{});
-    installSimpleTestCase(&libc_test, "math/pow.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/powf.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/powl.c", .{ .powerpc64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/remainder.c", .{});
-    installSimpleTestCase(&libc_test, "math/remainderf.c", .{});
-    installSimpleTestCase(&libc_test, "math/remainderl.c", .{});
-    installSimpleTestCase(&libc_test, "math/remquo.c", .{});
-    installSimpleTestCase(&libc_test, "math/remquof.c", .{});
-    installSimpleTestCase(&libc_test, "math/remquol.c", .{});
-    installSimpleTestCase(&libc_test, "math/rint.c", .{});
-    installSimpleTestCase(&libc_test, "math/rintf.c", .{});
-    installSimpleTestCase(&libc_test, "math/rintl.c", .{});
-    installSimpleTestCase(&libc_test, "math/round.c", .{});
-    installSimpleTestCase(&libc_test, "math/roundf.c", .{});
-    installSimpleTestCase(&libc_test, "math/roundl.c", .{});
-    installSimpleTestCase(&libc_test, "math/scalb.c", .{});
-    installSimpleTestCase(&libc_test, "math/scalbf.c", .{});
-    installSimpleTestCase(&libc_test, "math/scalbln.c", .{});
-    installSimpleTestCase(&libc_test, "math/scalblnf.c", .{});
-    installSimpleTestCase(&libc_test, "math/scalblnl.c", .{});
-    installSimpleTestCase(&libc_test, "math/scalbn.c", .{});
-    installSimpleTestCase(&libc_test, "math/scalbnf.c", .{});
-    installSimpleTestCase(&libc_test, "math/scalbnl.c", .{});
-    installSimpleTestCase(&libc_test, "math/sin.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/sincos.c", .{});
-    installSimpleTestCase(&libc_test, "math/sincosf.c", .{});
-    installSimpleTestCase(&libc_test, "math/sincosl.c", .{});
-    installSimpleTestCase(&libc_test, "math/sinf.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/sinh.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/sinhf.c", .{});
-    installSimpleTestCase(&libc_test, "math/sinhl.c", .{ .x86 = true, .powerpc64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/sinl.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/sqrt.c", .{});
-    installSimpleTestCase(&libc_test, "math/sqrtf.c", .{});
-    installSimpleTestCase(&libc_test, "math/sqrtl.c", .{});
-    installSimpleTestCase(&libc_test, "math/tan.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/tanf.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/tanh.c", .{});
-    installSimpleTestCase(&libc_test, "math/tanhf.c", .{});
-    installSimpleTestCase(&libc_test, "math/tanhl.c", .{});
-    installSimpleTestCase(&libc_test, "math/tanl.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/tgamma.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/tgammaf.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/tgammal.c", .{ .powerpc64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/trunc.c", .{});
-    installSimpleTestCase(&libc_test, "math/truncf.c", .{});
-    installSimpleTestCase(&libc_test, "math/truncl.c", .{});
-    installSimpleTestCase(&libc_test, "math/y0.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/y0f.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "math/y1.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/y1f.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/yn.c", .{ .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "math/ynf.c", .{ .always = true });
+    installSimpleTestCase(&libc_test, "math/acos.c", false, false);
+    installSimpleTestCase(&libc_test, "math/acosf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/acosh.c", true, false);
+    installSimpleTestCase(&libc_test, "math/acoshf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/acoshl.c", true, false);
+    installSimpleTestCase(&libc_test, "math/acosl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/asin.c", false, false);
+    installSimpleTestCase(&libc_test, "math/asinf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/asinh.c", true, false);
+    installSimpleTestCase(&libc_test, "math/asinhf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/asinhl.c", true, false);
+    installSimpleTestCase(&libc_test, "math/asinl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/atan2.c", false, false);
+    installSimpleTestCase(&libc_test, "math/atan2f.c", false, false);
+    installSimpleTestCase(&libc_test, "math/atan2l.c", false, false);
+    installSimpleTestCase(&libc_test, "math/atan.c", false, false);
+    installSimpleTestCase(&libc_test, "math/atanf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/atanh.c", false, false);
+    installSimpleTestCase(&libc_test, "math/atanhf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/atanhl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/atanl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/cbrt.c", false, false);
+    installSimpleTestCase(&libc_test, "math/cbrtf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/cbrtl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/ceil.c", false, false);
+    installSimpleTestCase(&libc_test, "math/ceilf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/ceill.c", false, false);
+    installSimpleTestCase(&libc_test, "math/copysign.c", false, false);
+    installSimpleTestCase(&libc_test, "math/copysignf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/copysignl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/cos.c", false, false);
+    installSimpleTestCase(&libc_test, "math/cosf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/cosh.c", true, false);
+    installSimpleTestCase(&libc_test, "math/coshf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/coshl.c", true, false);
+    installSimpleTestCase(&libc_test, "math/cosl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/drem.c", false, false);
+    installSimpleTestCase(&libc_test, "math/dremf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/erf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/erfc.c", true, false);
+    installSimpleTestCase(&libc_test, "math/erfcf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/erfcl.c", true, false);
+    installSimpleTestCase(&libc_test, "math/erff.c", false, false);
+    installSimpleTestCase(&libc_test, "math/erfl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/exp10.c", false, false);
+    installSimpleTestCase(&libc_test, "math/exp10f.c", false, false);
+    installSimpleTestCase(&libc_test, "math/exp10l.c", false, false);
+    installSimpleTestCase(&libc_test, "math/exp2.c", true, false);
+    installSimpleTestCase(&libc_test, "math/exp2f.c", false, false);
+    installSimpleTestCase(&libc_test, "math/exp2l.c", true, false);
+    installSimpleTestCase(&libc_test, "math/exp.c", false, false);
+    installSimpleTestCase(&libc_test, "math/expf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/expl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/expm1.c", true, false);
+    installSimpleTestCase(&libc_test, "math/expm1f.c", true, false);
+    installSimpleTestCase(&libc_test, "math/expm1l.c", true, false);
+    installSimpleTestCase(&libc_test, "math/fabs.c", false, false);
+    installSimpleTestCase(&libc_test, "math/fabsf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/fabsl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/fdim.c", true, false);
+    installSimpleTestCase(&libc_test, "math/fdimf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/fdiml.c", true, false);
+    installSimpleTestCase(&libc_test, "math/fenv.c", false, false);
+    installSimpleTestCase(&libc_test, "math/floor.c", false, false);
+    installSimpleTestCase(&libc_test, "math/floorf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/floorl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/fma.c", true, false);
+    installSimpleTestCase(&libc_test, "math/fmaf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/fmal.c", true, false);
+    installSimpleTestCase(&libc_test, "math/fmax.c", false, false);
+    installSimpleTestCase(&libc_test, "math/fmaxf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/fmaxl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/fmin.c", false, false);
+    installSimpleTestCase(&libc_test, "math/fminf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/fminl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/fmod.c", false, false);
+    installSimpleTestCase(&libc_test, "math/fmodf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/fmodl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/fpclassify.c", false, false);
+    installSimpleTestCase(&libc_test, "math/frexp.c", false, false);
+    installSimpleTestCase(&libc_test, "math/frexpf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/frexpl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/hypot.c", true, false);
+    installSimpleTestCase(&libc_test, "math/hypotf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/hypotl.c", true, false);
+    installSimpleTestCase(&libc_test, "math/ilogb.c", true, false);
+    installSimpleTestCase(&libc_test, "math/ilogbf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/ilogbl.c", true, false);
+    installSimpleTestCase(&libc_test, "math/isless.c", false, false);
+    installSimpleTestCase(&libc_test, "math/j0.c", true, false);
+    installSimpleTestCase(&libc_test, "math/j0f.c", false, false);
+    installSimpleTestCase(&libc_test, "math/j1.c", false, false);
+    installSimpleTestCase(&libc_test, "math/j1f.c", false, false);
+    installSimpleTestCase(&libc_test, "math/jn.c", true, false);
+    installSimpleTestCase(&libc_test, "math/jnf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/ldexp.c", false, false);
+    installSimpleTestCase(&libc_test, "math/ldexpf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/ldexpl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/lgamma.c", true, false);
+    installSimpleTestCase(&libc_test, "math/lgammaf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/lgammaf_r.c", true, false);
+    installSimpleTestCase(&libc_test, "math/lgammal.c", true, false);
+    installSimpleTestCase(&libc_test, "math/lgammal_r.c", false, false);
+    installSimpleTestCase(&libc_test, "math/lgamma_r.c", false, false);
+    installSimpleTestCase(&libc_test, "math/llrint.c", true, false);
+    installSimpleTestCase(&libc_test, "math/llrintf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/llrintl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/llround.c", true, false);
+    installSimpleTestCase(&libc_test, "math/llroundf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/llroundl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/log10.c", false, false);
+    installSimpleTestCase(&libc_test, "math/log10f.c", false, false);
+    installSimpleTestCase(&libc_test, "math/log10l.c", false, false);
+    installSimpleTestCase(&libc_test, "math/log1p.c", true, false);
+    installSimpleTestCase(&libc_test, "math/log1pf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/log1pl.c", true, false);
+    installSimpleTestCase(&libc_test, "math/log2.c", false, false);
+    installSimpleTestCase(&libc_test, "math/log2f.c", false, false);
+    installSimpleTestCase(&libc_test, "math/log2l.c", false, false);
+    installSimpleTestCase(&libc_test, "math/logb.c", true, false);
+    installSimpleTestCase(&libc_test, "math/logbf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/logbl.c", true, false);
+    installSimpleTestCase(&libc_test, "math/log.c", false, false);
+    installSimpleTestCase(&libc_test, "math/logf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/logl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/lrint.c", false, false);
+    installSimpleTestCase(&libc_test, "math/lrintf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/lrintl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/lround.c", false, false);
+    installSimpleTestCase(&libc_test, "math/lroundf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/lroundl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/modf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/modff.c", false, false);
+    installSimpleTestCase(&libc_test, "math/modfl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/nearbyint.c", false, false);
+    installSimpleTestCase(&libc_test, "math/nearbyintf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/nearbyintl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/nextafter.c", false, false);
+    installSimpleTestCase(&libc_test, "math/nextafterf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/nextafterl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/nexttoward.c", false, false);
+    installSimpleTestCase(&libc_test, "math/nexttowardf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/nexttowardl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/pow10.c", false, false);
+    installSimpleTestCase(&libc_test, "math/pow10f.c", false, false);
+    installSimpleTestCase(&libc_test, "math/pow10l.c", false, false);
+    installSimpleTestCase(&libc_test, "math/pow.c", true, false);
+    installSimpleTestCase(&libc_test, "math/powf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/powl.c", true, false);
+    installSimpleTestCase(&libc_test, "math/remainder.c", false, false);
+    installSimpleTestCase(&libc_test, "math/remainderf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/remainderl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/remquo.c", false, false);
+    installSimpleTestCase(&libc_test, "math/remquof.c", false, false);
+    installSimpleTestCase(&libc_test, "math/remquol.c", false, false);
+    installSimpleTestCase(&libc_test, "math/rint.c", true, false);
+    installSimpleTestCase(&libc_test, "math/rintf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/rintl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/round.c", false, false);
+    installSimpleTestCase(&libc_test, "math/roundf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/roundl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/scalb.c", false, false);
+    installSimpleTestCase(&libc_test, "math/scalbf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/scalbln.c", false, false);
+    installSimpleTestCase(&libc_test, "math/scalblnf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/scalblnl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/scalbn.c", false, false);
+    installSimpleTestCase(&libc_test, "math/scalbnf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/scalbnl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/sin.c", true, false);
+    installSimpleTestCase(&libc_test, "math/sincos.c", false, false);
+    installSimpleTestCase(&libc_test, "math/sincosf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/sincosl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/sinf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/sinh.c", true, false);
+    installSimpleTestCase(&libc_test, "math/sinhf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/sinhl.c", true, false);
+    installSimpleTestCase(&libc_test, "math/sinl.c", true, false);
+    installSimpleTestCase(&libc_test, "math/sqrt.c", true, false);
+    installSimpleTestCase(&libc_test, "math/sqrtf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/sqrtl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/tan.c", true, false);
+    installSimpleTestCase(&libc_test, "math/tanf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/tanh.c", false, false);
+    installSimpleTestCase(&libc_test, "math/tanhf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/tanhl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/tanl.c", true, false);
+    installSimpleTestCase(&libc_test, "math/tgamma.c", true, false);
+    installSimpleTestCase(&libc_test, "math/tgammaf.c", true, false);
+    installSimpleTestCase(&libc_test, "math/tgammal.c", true, false);
+    installSimpleTestCase(&libc_test, "math/trunc.c", false, false);
+    installSimpleTestCase(&libc_test, "math/truncf.c", false, false);
+    installSimpleTestCase(&libc_test, "math/truncl.c", false, false);
+    installSimpleTestCase(&libc_test, "math/y0.c", true, false);
+    installSimpleTestCase(&libc_test, "math/y0f.c", true, false);
+    installSimpleTestCase(&libc_test, "math/y1.c", true, false);
+    installSimpleTestCase(&libc_test, "math/y1f.c", true, false);
+    installSimpleTestCase(&libc_test, "math/yn.c", true, false);
+    installSimpleTestCase(&libc_test, "math/ynf.c", true, false);
 
-    installSimpleTestCase(&libc_test, "regression/daemon-failure.c", .{});
-    installSimpleTestCase(&libc_test, "regression/dn_expand-empty.c", .{});
-    installSimpleTestCase(&libc_test, "regression/dn_expand-ptr-0.c", .{});
-    installSimpleTestCase(&libc_test, "regression/execle-env.c", .{});
-    installSimpleTestCase(&libc_test, "regression/fflush-exit.c", .{});
-    installSimpleTestCase(&libc_test, "regression/fgets-eof.c", .{});
-    installSimpleTestCase(&libc_test, "regression/fgetwc-buffering.c", .{});
-    installSimpleTestCase(&libc_test, "regression/flockfile-list.c", .{});
-    installSimpleTestCase(&libc_test, "regression/fpclassify-invalid-ld80.c", .{});
-    installSimpleTestCase(&libc_test, "regression/ftello-unflushed-append.c", .{});
-    installSimpleTestCase(&libc_test, "regression/getpwnam_r-crash.c", .{});
-    installSimpleTestCase(&libc_test, "regression/getpwnam_r-errno.c", .{});
-    installSimpleTestCase(&libc_test, "regression/iconv-roundtrips.c", .{});
-    installSimpleTestCase(&libc_test, "regression/inet_ntop-v4mapped.c", .{});
-    installSimpleTestCase(&libc_test, "regression/inet_pton-empty-last-field.c", .{});
-    installSimpleTestCase(&libc_test, "regression/iswspace-null.c", .{});
-    installSimpleTestCase(&libc_test, "regression/lrand48-signextend.c", .{});
-    installSimpleTestCase(&libc_test, "regression/lseek-large.c", .{});
-    installSimpleTestCase(&libc_test, "regression/malloc-0.c", .{});
-    installSimpleTestCase(&libc_test, "regression/malloc-brk-fail.c", .{ .release = true });
-    installSimpleTestCase(&libc_test, "regression/malloc-oom.c", .{ .release = true, .powerpc64le = true });
-    installSimpleTestCase(&libc_test, "regression/mbsrtowcs-overflow.c", .{});
-    installSimpleTestCase(&libc_test, "regression/memmem-oob.c", .{});
-    installSimpleTestCase(&libc_test, "regression/memmem-oob-read.c", .{});
-    installSimpleTestCase(&libc_test, "regression/mkdtemp-failure.c", .{});
-    installSimpleTestCase(&libc_test, "regression/mkstemp-failure.c", .{});
-    installSimpleTestCase(&libc_test, "regression/printf-1e9-oob.c", .{});
-    installSimpleTestCase(&libc_test, "regression/printf-fmt-g-round.c", .{});
-    installSimpleTestCase(&libc_test, "regression/printf-fmt-g-zeros.c", .{});
-    installSimpleTestCase(&libc_test, "regression/printf-fmt-n.c", .{});
-    installSimpleTestCase(&libc_test, "regression/pthread_atfork-errno-clobber.c", .{});
-    installSimpleTestCase(&libc_test, "regression/pthread_cancel-sem_wait.c", .{});
-    installSimpleTestCase(&libc_test, "regression/pthread_condattr_setclock.c", .{});
-    installSimpleTestCase(&libc_test, "regression/pthread_cond-smasher.c", .{});
-    installSimpleTestCase(&libc_test, "regression/pthread_cond_wait-cancel_ignored.c", .{ .hexagon = true });
-    installSimpleTestCase(&libc_test, "regression/pthread_create-oom.c", .{ .powerpc64 = true });
-    installSimpleTestCase(&libc_test, "regression/pthread_exit-cancel.c", .{});
-    installSimpleTestCase(&libc_test, "regression/pthread_exit-dtor.c", .{});
-    installSimpleTestCase(&libc_test, "regression/pthread_once-deadlock.c", .{});
-    installSimpleTestCase(&libc_test, "regression/pthread-robust-detach.c", .{ .powerpc64 = true, .aarch64 = true, .s390x = true, .riscv = true, .loongarch64 = true, .hexagon = true });
-    installSimpleTestCase(&libc_test, "regression/pthread_rwlock-ebusy.c", .{});
-    installSimpleTestCase(&libc_test, "regression/putenv-doublefree.c", .{});
-    installSimpleTestCase(&libc_test, "regression/raise-race.c", .{});
-    installSimpleTestCase(&libc_test, "regression/regex-backref-0.c", .{});
-    installSimpleTestCase(&libc_test, "regression/regex-bracket-icase.c", .{});
-    installSimpleTestCase(&libc_test, "regression/regexec-nosub.c", .{});
-    installSimpleTestCase(&libc_test, "regression/regex-ere-backref.c", .{});
-    installSimpleTestCase(&libc_test, "regression/regex-escaped-high-byte.c", .{});
-    installSimpleTestCase(&libc_test, "regression/regex-negated-range.c", .{});
-    installSimpleTestCase(&libc_test, "regression/rewind-clear-error.c", .{});
-    installSimpleTestCase(&libc_test, "regression/rlimit-open-files.c", .{});
-    installSimpleTestCase(&libc_test, "regression/scanf-bytes-consumed.c", .{});
-    installSimpleTestCase(&libc_test, "regression/scanf-match-literal-eof.c", .{});
-    installSimpleTestCase(&libc_test, "regression/scanf-nullbyte-char.c", .{});
-    installSimpleTestCase(&libc_test, "regression/sem_close-unmap.c", .{});
-    installSimpleTestCase(&libc_test, "regression/setenv-oom.c", .{ .powerpc64 = true });
-    installSimpleTestCase(&libc_test, "regression/setvbuf-unget.c", .{});
-    installSimpleTestCase(&libc_test, "regression/sigaltstack.c", .{});
-    installSimpleTestCase(&libc_test, "regression/sigprocmask-internal.c", .{});
-    installSimpleTestCase(&libc_test, "regression/sigreturn.c", .{});
-    installSimpleTestCase(&libc_test, "regression/sscanf-eof.c", .{});
-    installSimpleTestCase(&libc_test, "regression/statvfs.c", .{ .always = true });
-    installSimpleTestCase(&libc_test, "regression/strverscmp.c", .{});
-    installSimpleTestCase(&libc_test, "regression/syscall-sign-extend.c", .{});
-    installSimpleTestCase(&libc_test, "regression/uselocale-0.c", .{});
-    installSimpleTestCase(&libc_test, "regression/wcsncpy-read-overflow.c", .{});
-    installSimpleTestCase(&libc_test, "regression/wcsstr-false-negative.c", .{});
+    installSimpleTestCase(&libc_test, "regression/daemon-failure.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/dn_expand-empty.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/dn_expand-ptr-0.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/execle-env.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/fflush-exit.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/fgets-eof.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/fgetwc-buffering.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/flockfile-list.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/fpclassify-invalid-ld80.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/ftello-unflushed-append.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/getpwnam_r-crash.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/getpwnam_r-errno.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/iconv-roundtrips.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/inet_ntop-v4mapped.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/inet_pton-empty-last-field.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/iswspace-null.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/lrand48-signextend.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/lseek-large.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/malloc-0.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/malloc-brk-fail.c", false, true);
+    installSimpleTestCase(&libc_test, "regression/malloc-oom.c", true, true);
+    installSimpleTestCase(&libc_test, "regression/mbsrtowcs-overflow.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/memmem-oob.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/memmem-oob-read.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/mkdtemp-failure.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/mkstemp-failure.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/printf-1e9-oob.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/printf-fmt-g-round.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/printf-fmt-g-zeros.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/printf-fmt-n.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/pthread_atfork-errno-clobber.c", true, false);
+    installSimpleTestCase(&libc_test, "regression/pthread_cancel-sem_wait.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/pthread_condattr_setclock.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/pthread_cond-smasher.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/pthread_cond_wait-cancel_ignored.c", true, false);
+    installSimpleTestCase(&libc_test, "regression/pthread_create-oom.c", true, false);
+    installSimpleTestCase(&libc_test, "regression/pthread_exit-cancel.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/pthread_exit-dtor.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/pthread_once-deadlock.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/pthread-robust-detach.c", true, false);
+    installSimpleTestCase(&libc_test, "regression/pthread_rwlock-ebusy.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/putenv-doublefree.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/raise-race.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/regex-backref-0.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/regex-bracket-icase.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/regexec-nosub.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/regex-ere-backref.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/regex-escaped-high-byte.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/regex-negated-range.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/rewind-clear-error.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/rlimit-open-files.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/scanf-bytes-consumed.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/scanf-match-literal-eof.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/scanf-nullbyte-char.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/sem_close-unmap.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/setenv-oom.c", true, false);
+    installSimpleTestCase(&libc_test, "regression/setvbuf-unget.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/sigaltstack.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/sigprocmask-internal.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/sigreturn.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/sscanf-eof.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/statvfs.c", true, false);
+    installSimpleTestCase(&libc_test, "regression/strverscmp.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/syscall-sign-extend.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/uselocale-0.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/wcsncpy-read-overflow.c", false, false);
+    installSimpleTestCase(&libc_test, "regression/wcsstr-false-negative.c", false, false);
 
     // TODO
     // "functional/dlopen.c",
@@ -462,9 +409,9 @@ pub fn build(b: *std.Build) void {
     // "regression/tls_get_new-dtv_dso.c"
 }
 
-fn installSimpleTestCase(libc_test: *const LibCTest, case: []const u8, skip: Skip) void {
-    if (skip.shouldSkip(libc_test))
-        return;
+fn installSimpleTestCase(libc_test: *const LibCTest, case: []const u8, unstable: bool, debug_only: bool) void {
+    if (unstable and !libc_test.unstable) return;
+    if (debug_only and libc_test.optimize != .Debug) return;
 
     const b = libc_test.b;
     const test_mod = b.createModule(.{
@@ -486,12 +433,12 @@ fn installSimpleTestCase(libc_test: *const LibCTest, case: []const u8, skip: Ski
         .root_module = test_mod,
     });
 
-    installTestCase(b, libc_test.test_step, exe);
+    installTestCase(libc_test, exe);
 }
 
-fn installTlsAlignStaticTestCase(libc_test: *const LibCTest, skip: Skip) void {
-    if (skip.shouldSkip(libc_test))
-        return;
+fn installTlsAlignStaticTestCase(libc_test: *const LibCTest, unstable: bool, debug_only: bool) void {
+    if (unstable and !libc_test.unstable) return;
+    if (debug_only and libc_test.optimize != .Debug) return;
 
     const b = libc_test.b;
     const test_mod = b.createModule(.{
@@ -514,17 +461,20 @@ fn installTlsAlignStaticTestCase(libc_test: *const LibCTest, skip: Skip) void {
         .root_module = test_mod,
     });
 
-    installTestCase(b, libc_test.test_step, exe);
+    installTestCase(libc_test, exe);
 }
 
-fn installTestCase(b: *std.Build, test_step: *std.Build.Step, exe: *std.Build.Step.Compile) void {
+fn installTestCase(libc_test: *const LibCTest, exe: *std.Build.Step.Compile) void {
+    const b = libc_test.b;
     b.installArtifact(exe);
 
     const test_run = b.addRunArtifact(exe);
+
+    test_run.skip_foreign_checks = libc_test.skip_foreign_checks;
 
     test_run.expectStdErrEqual("");
     test_run.expectStdOutEqual("");
     test_run.expectExitCode(0);
 
-    test_step.dependOn(&test_run.step);
+    libc_test.test_step.dependOn(&test_run.step);
 }

@@ -12,8 +12,9 @@ To run the test cases, execute the following command:
 zig build test -Dtarget=[target]
 ```
 
-Not every test case passes on every target. For the following targets, failing tests are skipped by default.
-To determine which tests fail, I ran them on my system (mostly using qemu). Results on your machine might differ.
+Not every test case passes under all circumstances. Such unstable test cases are skipped by default. To build/run them anyway, use the `-Dunstable` command line argument.
+
+To determine which tests are unstable, I ran the test cases on the following targets (mostly using qemu):
 
 - `aarch64-linux-musl`
 - `aarch64_be-linux-musl`
@@ -27,6 +28,3 @@ To determine which tests fail, I ran them on my system (mostly using qemu). Resu
 - `x86-linux-musl`
 - `x86_64-linux-musl`
 - `x86_64-linux-muslx32`
-
-If you use another target (including `native-native-musl`), some test cases will probably fail.
-If you want to build/run all test cases, use the `-Dno-skip` command line argument.
