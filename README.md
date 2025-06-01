@@ -1,11 +1,31 @@
 # zig-libc-test
 
+To build the test cases into `zig-out/bin`, execute the following command:
+
 ```
-zig build test -Dtarget=x86_64-linux-musl
+zig build -Dtarget=[target]
 ```
 
-Inside of [build.zig](./build.zig) is a TODO list of test cases not run by this repo.
+To run the test cases, execute the following command:
 
-Also, some tests are commented out. When run with `zig build test -Dtarget=x86_64-linux-musl`, these test cases seem to fail on my machine.
-If this is run with `zig build test -Dtarget=native-native-musl` on my machine, more tests fail.
-Even more tests fail if this is run with `zig build test -Dtarget=native-native-gnu` on my machine.
+```
+zig build test -Dtarget=[target]
+```
+
+Not every test case passes on every target. For the following targets, failing tests are skipped by default.
+
+- `aarch64-linux-musl`
+- `aarch64_be-linux-musl`
+- `hexagon-linux-musl`
+- `loongarch64-linux-musl`
+- `powerpc64-linux-musl`
+- `powerpc64le-linux-musl`
+- `riscv32-linux-musl`
+- `riscv64-linux-musl`
+- `s390x-linux-musl`
+- `x86-linux-musl`
+- `x86_64-linux-musl`
+- `x86_64-linux-muslx32`
+
+If you use another target (including `native-native-musl`), some test cases will probably fail.
+If you want to build/run all test cases, use the `-Dno-skip` command line argument.
