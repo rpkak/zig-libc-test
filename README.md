@@ -13,6 +13,7 @@ zig build test -Dtarget=[target]
 ```
 
 Not every test case passes on every target. For the following targets, failing tests are skipped by default.
+To determine which tests fail, I ran them on my system (mostly using qemu). Results on your machine might differ.
 
 - `aarch64-linux-musl`
 - `aarch64_be-linux-musl`
