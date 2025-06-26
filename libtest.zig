@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 const posix = std.posix;
 
@@ -26,7 +27,7 @@ fn testMapLength(length: usize) !bool {
     return true;
 }
 
-export fn t_vmfill(p: [*][*]align(std.heap.page_size_min) u8, n: [*]usize, len: c_int) c_int {
+fn t_vmfill(p: [*][*]align(std.heap.page_size_min) u8, n: [*]usize, len: c_int) callconv(.c) c_int {
     var upper_bound_log: std.math.Log2Int(usize) = @typeInfo(usize).int.bits - 1;
 
     var i: std.math.IntFittingRange(0, std.math.maxInt(c_int)) = 0;
@@ -57,7 +58,7 @@ export fn t_vmfill(p: [*][*]align(std.heap.page_size_min) u8, n: [*]usize, len: 
     }
 }
 
-export fn t_setrlim(r: std.c.rlimit_resource, lim: c_long) c_int {
+fn t_setrlim(r: std.c.rlimit_resource, lim: c_long) callconv(.c) c_int {
     var rl = std.posix.getrlimit(r) catch |err| {
         _ = t_printf(std.fmt.comptimePrint("{s}:{d}: getrlimit %s: %s\n", .{ @src().file, @src().line }), @tagName(r).ptr, @errorName(err).ptr);
         return -1;
@@ -79,7 +80,7 @@ export fn t_setrlim(r: std.c.rlimit_resource, lim: c_long) c_int {
     return 0;
 }
 
-export fn t_memfill() c_int {
+fn t_memfill() callconv(.c) c_int {
     var err = false;
     if (t_vmfill(undefined, undefined, 0) == -1) {
         _ = t_printf(std.fmt.comptimePrint("{s}:{d}: vmfill failed: %s\n", .{ @src().file, @src().line }), @tagName(@as(std.posix.E, @enumFromInt(std.c._errno().*))).ptr);
@@ -100,5 +101,13 @@ export fn t_memfill() c_int {
         } else {
             return 0;
         }
+    }
+}
+
+comptime {
+    if (builtin.os.tag != .windows) {
+        @export(&t_vmfill, .{ .name = "t_vmfill" });
+        @export(&t_setrlim, .{ .name = "t_setrlim" });
+        @export(&t_memfill, .{ .name = "t_memfill" });
     }
 }

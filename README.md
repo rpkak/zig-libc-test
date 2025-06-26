@@ -16,6 +16,8 @@ Not every test case passes under all circumstances. Such unstable test cases are
 
 To determine which tests are unstable, I ran the test cases on the following targets (mostly using qemu):
 
+musl:
+
 - `aarch64-linux-musl`
 - `aarch64_be-linux-musl`
 - `hexagon-linux-musl`
@@ -28,3 +30,8 @@ To determine which tests are unstable, I ran the test cases on the following tar
 - `x86-linux-musl`
 - `x86_64-linux-musl`
 - `x86_64-linux-muslx32`
+
+mingw:
+
+- `x86_64-windows-gnu`
+- `x86-windows-gnu`
