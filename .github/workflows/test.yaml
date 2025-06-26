@@ -61,5 +61,7 @@ jobs:
     - name: Install QEMU
       if: ${{ matrix.target.qemu }}
       run: sudo apt-get install --yes qemu-user
+    - name: Build all test cases
+      run: zig build -Dtarget=${{ matrix.target.triple }} -Doptimize=${{ matrix.optimize }} -Dskip-foreign-checks --verbose --summary all -Dunstable install
     - name: Run test cases
-      run: zig build test -fqemu -Dtarget=${{ matrix.target.triple }} -Doptimize=${{ matrix.optimize }} -Dskip-foreign-checks --verbose --summary all
+      run: zig build -Dtarget=${{ matrix.target.triple }} -Doptimize=${{ matrix.optimize }} -Dskip-foreign-checks --verbose --summary all -fqemu test
