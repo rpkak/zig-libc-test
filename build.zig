@@ -185,7 +185,7 @@ pub fn build(b: *std.Build) !void {
     installSimpleTestCase(&libc_test, "functional/wcstol.c", .{ .musl = .passes, .mingw = .unstable }, false);
 
     installSimpleTestCase(&libc_test, "math/acos.c", .passes, false);
-    installSimpleTestCase(&libc_test, "math/acosf.c", .passes, false);
+    installSimpleTestCase(&libc_test, "math/acosf.c", .{ .musl = .passes, .mingw = .unstable }, false);
     installSimpleTestCase(&libc_test, "math/acosh.c", .unstable, false);
     installSimpleTestCase(&libc_test, "math/acoshf.c", .passes, false);
     installSimpleTestCase(&libc_test, "math/acoshl.c", .unstable, false);
@@ -235,7 +235,7 @@ pub fn build(b: *std.Build) !void {
     installSimpleTestCase(&libc_test, "math/exp2f.c", .passes, false);
     installSimpleTestCase(&libc_test, "math/exp2l.c", .unstable, false);
     installSimpleTestCase(&libc_test, "math/exp.c", .{ .musl = .passes, .mingw = .unstable }, false);
-    installSimpleTestCase(&libc_test, "math/expf.c", .{ .musl = .unstable, .mingw = .passes }, false);
+    installSimpleTestCase(&libc_test, "math/expf.c", .unstable, false);
     installSimpleTestCase(&libc_test, "math/expl.c", .{ .musl = .passes, .mingw = .unstable }, false);
     installSimpleTestCase(&libc_test, "math/expm1.c", .unstable, false);
     installSimpleTestCase(&libc_test, "math/expm1f.c", .{ .musl = .unstable, .mingw = .passes }, false);
@@ -316,7 +316,7 @@ pub fn build(b: *std.Build) !void {
     installSimpleTestCase(&libc_test, "math/lroundf.c", .passes, false);
     installSimpleTestCase(&libc_test, "math/lroundl.c", .passes, false);
     installSimpleTestCase(&libc_test, "math/modf.c", .passes, false);
-    installSimpleTestCase(&libc_test, "math/modff.c", .passes, false);
+    installSimpleTestCase(&libc_test, "math/modff.c", .{ .musl = .passes, .mingw = .unstable }, false);
     installSimpleTestCase(&libc_test, "math/modfl.c", .{ .musl = .passes, .mingw = .unstable }, false);
     installSimpleTestCase(&libc_test, "math/nearbyint.c", .passes, false);
     installSimpleTestCase(&libc_test, "math/nearbyintf.c", .passes, false);

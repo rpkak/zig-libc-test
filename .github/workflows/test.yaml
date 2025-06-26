@@ -51,6 +51,12 @@ jobs:
           - triple: x86_64-linux-muslx32
             image: ubuntu-latest
             qemu: false
+          - triple: x86-windows-gnu
+            image: windows-latest
+            qemu: false
+          - triple: x86_64-windows-gnu
+            image: windows-latest
+            qemu: false
     name: "Run libc-test ${{ matrix.optimize }} on ${{ matrix.target.triple }}"
     runs-on: ${{ matrix.target.image }}
     steps:
