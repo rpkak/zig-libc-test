@@ -51,6 +51,9 @@ jobs:
           - triple: x86_64-linux-muslx32
             image: ubuntu-latest
             qemu: false
+          - triple: aarch64-windows-gnu
+            image: windows-11-arm
+            qemu: false
           - triple: x86-windows-gnu
             image: windows-latest
             qemu: false
