@@ -33,5 +33,6 @@ musl:
 
 mingw:
 
+- `aarch64-windows-gnu`
 - `x86_64-windows-gnu`
 - `x86-windows-gnu`
