@@ -60,17 +60,24 @@ jobs:
           - triple: x86_64-windows-gnu
             image: windows-latest
             qemu: false
+          - triple: wasm32-wasi-musl
+            image: ubuntu-latest
+            qemu: false
     name: "Run libc-test ${{ matrix.optimize }} on ${{ matrix.target.triple }}"
     runs-on: ${{ matrix.target.image }}
     steps:
-    - uses: mlugg/setup-zig@v2
+    - name: Setup Zig
+      uses: mlugg/setup-zig@v2
       with:
         version: master
-    - uses: actions/checkout@v3
-    - name: Install QEMU
+    - name: Setup QEMU
       if: ${{ matrix.target.qemu }}
       run: sudo apt-get install --yes qemu-user
+    - name: Setup wasmtime
+      uses: bytecodealliance/actions/wasmtime/setup@v1
+      if: ${{ matrix.target.triple }} == 'wasm32-wasi-musl'
+    - uses: actions/checkout@v3
     - name: Build all test cases
       run: zig build -Dtarget=${{ matrix.target.triple }} -Doptimize=${{ matrix.optimize }} -Dskip-foreign-checks --verbose --summary all -Dunstable install
     - name: Run test cases
-      run: zig build -Dtarget=${{ matrix.target.triple }} -Doptimize=${{ matrix.optimize }} -Dskip-foreign-checks --verbose --summary all -fqemu test
+      run: zig build -Dtarget=${{ matrix.target.triple }} -Doptimize=${{ matrix.optimize }} -Dskip-foreign-checks --verbose --summary all -fqemu -fwasmtime test

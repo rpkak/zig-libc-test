@@ -36,3 +36,7 @@ mingw:
 - `aarch64-windows-gnu`
 - `x86_64-windows-gnu`
 - `x86-windows-gnu`
+
+wasi-libc:
+
+- `wasm32-wasi-musl`

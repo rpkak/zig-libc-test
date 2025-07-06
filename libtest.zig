@@ -105,7 +105,7 @@ fn t_memfill() callconv(.c) c_int {
 }
 
 comptime {
-    if (builtin.os.tag != .windows) {
+    if (builtin.target.isMuslLibC()) {
         @export(&t_vmfill, .{ .name = "t_vmfill" });
         @export(&t_setrlim, .{ .name = "t_setrlim" });
         @export(&t_memfill, .{ .name = "t_memfill" });
