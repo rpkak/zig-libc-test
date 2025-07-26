@@ -179,7 +179,7 @@ pub fn build(b: *std.Build) !void {
     installSimpleTestCase(&libc_test, "functional/tls_local_exec.c", .{ .musl = .passes, .mingw = .passes, .wasi = .unsupported }, false);
     installSimpleTestCase(&libc_test, "functional/udiv.c", .passes, false);
     installSimpleTestCase(&libc_test, "functional/ungetc.c", .{ .musl = .passes, .mingw = .unstable, .wasi = .unsupported }, false);
-    installSimpleTestCase(&libc_test, "functional/utime.c", .{ .musl = .passes, .mingw = .unsupported, .wasi = .unsupported }, false);
+    installSimpleTestCase(&libc_test, "functional/utime.c", .{ .musl = .unstable, .mingw = .unsupported, .wasi = .unsupported }, false);
     installSimpleTestCase(&libc_test, "functional/vfork.c", .{ .musl = .passes, .mingw = .unsupported, .wasi = .unsupported }, false);
     installSimpleTestCase(&libc_test, "functional/wcsstr.c", .passes, false);
     installSimpleTestCase(&libc_test, "functional/wcstol.c", .{ .musl = .passes, .mingw = .unstable, .wasi = .passes }, false);

@@ -72,7 +72,7 @@ jobs:
         version: master
     - name: Setup QEMU
       if: ${{ matrix.target.qemu }}
-      run: sudo apt-get install --yes qemu-user
+      run: sudo apt-get update && sudo apt-get install --yes qemu-user
     - name: Setup wasmtime
       uses: bytecodealliance/actions/wasmtime/setup@v1
       if: ${{ matrix.target.triple }} == 'wasm32-wasi-musl'
