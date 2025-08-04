@@ -71,11 +71,11 @@ jobs:
       with:
         version: master
     - name: Setup QEMU
-      if: ${{ matrix.target.qemu }}
+      if: matrix.target.qemu
       run: sudo apt-get update && sudo apt-get install --yes qemu-user
     - name: Setup wasmtime
+      if: matrix.target.triple == 'wasm32-wasi-musl'
       uses: bytecodealliance/actions/wasmtime/setup@v1
-      if: ${{ matrix.target.triple }} == 'wasm32-wasi-musl'
     - uses: actions/checkout@v3
     - name: Build all test cases
       run: zig build -Dtarget=${{ matrix.target.triple }} -Doptimize=${{ matrix.optimize }} -Dskip-foreign-checks --verbose --summary all -Dunstable install
