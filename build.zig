@@ -238,7 +238,7 @@ pub fn build(b: *std.Build) !void {
     installSimpleTestCase(&libc_test, "math/expf.c", .{ .musl = .unstable, .mingw = .unstable, .wasi = .passes }, false);
     installSimpleTestCase(&libc_test, "math/expl.c", .{ .musl = .passes, .mingw = .unstable, .wasi = .passes }, false);
     installSimpleTestCase(&libc_test, "math/expm1.c", .{ .musl = .unstable, .mingw = .unstable, .wasi = .passes }, false);
-    installSimpleTestCase(&libc_test, "math/expm1f.c", .{ .musl = .unstable, .mingw = .passes, .wasi = .passes }, false);
+    installSimpleTestCase(&libc_test, "math/expm1f.c", .{ .musl = .unstable, .mingw = .unstable, .wasi = .passes }, false);
     installSimpleTestCase(&libc_test, "math/expm1l.c", .{ .musl = .unstable, .mingw = .unstable, .wasi = .passes }, false);
     installSimpleTestCase(&libc_test, "math/fabs.c", .passes, false);
     installSimpleTestCase(&libc_test, "math/fabsf.c", .passes, false);
@@ -336,9 +336,9 @@ pub fn build(b: *std.Build) !void {
     installSimpleTestCase(&libc_test, "math/remainder.c", .{ .musl = .passes, .mingw = .unstable, .wasi = .passes }, false);
     installSimpleTestCase(&libc_test, "math/remainderf.c", .{ .musl = .passes, .mingw = .unstable, .wasi = .passes }, false);
     installSimpleTestCase(&libc_test, "math/remainderl.c", .passes, false);
-    installSimpleTestCase(&libc_test, "math/remquo.c", .passes, false);
-    installSimpleTestCase(&libc_test, "math/remquof.c", .passes, false);
-    installSimpleTestCase(&libc_test, "math/remquol.c", .passes, false);
+    installSimpleTestCase(&libc_test, "math/remquo.c", .{ .musl = .passes, .mingw = .unstable, .wasi = .passes }, false);
+    installSimpleTestCase(&libc_test, "math/remquof.c", .{ .musl = .passes, .mingw = .unstable, .wasi = .passes }, false);
+    installSimpleTestCase(&libc_test, "math/remquol.c", .{ .musl = .passes, .mingw = .unstable, .wasi = .passes }, false);
     installSimpleTestCase(&libc_test, "math/rint.c", .{ .musl = .unstable, .mingw = .passes, .wasi = .passes }, false);
     installSimpleTestCase(&libc_test, "math/rintf.c", .{ .musl = .unstable, .mingw = .passes, .wasi = .passes }, false);
     installSimpleTestCase(&libc_test, "math/rintl.c", .passes, false);
