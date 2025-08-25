@@ -48,9 +48,6 @@ jobs:
           - triple: x86_64-linux-musl
             image: ubuntu-latest
             qemu: false
-          - triple: x86_64-linux-muslx32
-            image: ubuntu-latest
-            qemu: false
           - triple: aarch64-windows-gnu
             image: windows-11-arm
             qemu: false
@@ -78,6 +75,6 @@ jobs:
       uses: bytecodealliance/actions/wasmtime/setup@v1
     - uses: actions/checkout@v3
     - name: Build all test cases
-      run: zig build -Dtarget=${{ matrix.target.triple }} -Doptimize=${{ matrix.optimize }} -Dskip-foreign-checks --verbose --summary all -Dunstable install
+      run: zig build -Dtarget=${{ matrix.target.triple }} -Doptimize=${{ matrix.optimize }} --verbose --summary all -Dunstable install
     - name: Run test cases
-      run: zig build -Dtarget=${{ matrix.target.triple }} -Doptimize=${{ matrix.optimize }} -Dskip-foreign-checks --verbose --summary all -fqemu -fwasmtime test
+      run: zig build -Dtarget=${{ matrix.target.triple }} -Doptimize=${{ matrix.optimize }} --verbose --summary all -fqemu -fwasmtime test

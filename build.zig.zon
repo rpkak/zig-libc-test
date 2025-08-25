@@ -2,7 +2,7 @@
     .name = .zig_libc_test,
     .version = "0.0.0",
     .fingerprint = 0xaf1644d5cd5ca5e9,
-    .minimum_zig_version = "0.15.0-dev.552+bc2f7c754",
+    .minimum_zig_version = "0.15.1",
 
     .dependencies = .{
         .libc_test = .{
