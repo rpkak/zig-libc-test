@@ -16,6 +16,11 @@ Not every test case passes under all circumstances. Such unstable test cases are
 
 To determine which tests are unstable, I ran the test cases on the following targets (mostly using qemu):
 
+darwin:
+
+- `aarch64-macos`
+- `x86_64-macos`
+
 glibc:
 
 - `aarch64-linux-gnu`

@@ -57,6 +57,12 @@ jobs:
           - triple: x86_64-linux-gnu
             image: ubuntu-latest
             qemu: false
+          - triple: aarch64-macos
+            image: macos-latest
+            qemu: false
+          - triple: x86_64-macos
+            image: macos-13
+            qemu: false
           - triple: aarch64-windows-gnu
             image: windows-11-arm
             qemu: false
