@@ -6,6 +6,7 @@ const LibCTest = struct {
     optimize: std.builtin.OptimizeMode,
     src: std.Build.LazyPath,
     options_include: std.Build.LazyPath,
+    copy_file: *std.Build.Step.Compile,
     libtest: *std.Build.Step.Compile,
     test_step: *std.Build.Step,
     unstable: bool,
@@ -91,6 +92,15 @@ pub fn build(b: *std.Build) !void {
 
     const src = b.dependency("libc_test", .{}).path("src");
 
+    const copy_file = b.addExecutable(.{
+        .name = "copy_file",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/copy_file.zig"),
+            .target = b.graph.host,
+            .optimize = .Debug, // for error checking
+        }),
+    });
+
     const libc_impl: LibCImpl = try .fromTarget(b, target.result);
 
     const libtest_mod = b.createModule(.{
@@ -103,7 +113,7 @@ pub fn build(b: *std.Build) !void {
     var libtest_c_source_files: std.ArrayListUnmanaged([]const u8) = .empty;
     defer libtest_c_source_files.deinit(b.allocator);
 
-    try libtest_c_source_files.appendSlice(b.allocator, &.{ "print.c", "mtest.c" });
+    try libtest_c_source_files.appendSlice(b.allocator, &.{ "print.c", "mtest.c", "path.c" });
 
     if (libc_impl == .darwin or libc_impl == .gnu or libc_impl == .musl) {
         try libtest_c_source_files.appendSlice(b.allocator, &.{ "fdfill.c", "utf8.c" });
@@ -127,6 +137,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
         .src = src,
         .options_include = try generateOptionsInclude(b, target, src),
+        .copy_file = copy_file,
         .libtest = libtest,
         .test_step = test_step,
         .unstable = unstable,
@@ -590,6 +601,13 @@ pub fn build(b: *std.Build) !void {
         .musl = .passes,
         .mingw = .unsupported,
         .wasi = .passes,
+    }, false);
+    installDlopenTestCase(&libc_test, .{
+        .darwin = .passes,
+        .gnu = .passes,
+        .musl = .unstable,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
     }, false);
     installSimpleTestCase(&libc_test, "functional/env.c", .{
         .darwin = .unsupported,
@@ -2395,8 +2413,6 @@ pub fn build(b: *std.Build) !void {
     installSimpleTestCase(&libc_test, "regression/wcsstr-false-negative.c", .passes, false);
 
     // TODO
-    // "functional/dlopen.c",
-    // "functional/dlopen_dso.c"
     // "functional/tls_align.c"
     // "functional/tls_align_dlopen.c"
     // "functional/tls_align_dso.c"
@@ -2464,7 +2480,7 @@ fn installApiTestCase(libc_test: *const LibCTest, case: []const u8, support: Lib
         .root_module = test_mod,
     });
 
-    installTestCase(libc_test, exe);
+    installTestCase(libc_test, exe, .{});
 }
 
 fn installSimpleTestCase(libc_test: *const LibCTest, case: []const u8, support: LibCImpl.Support, debug_only: bool) void {
@@ -2491,7 +2507,43 @@ fn installSimpleTestCase(libc_test: *const LibCTest, case: []const u8, support: 
         .root_module = test_mod,
     });
 
-    installTestCase(libc_test, exe);
+    installTestCase(libc_test, exe, .{});
+}
+
+fn installDlopenTestCase(libc_test: *const LibCTest, support: LibCImpl.Support, debug_only: bool) void {
+    if (support.shouldSkip(libc_test)) return;
+    if (debug_only and libc_test.optimize != .Debug) return;
+
+    const b = libc_test.b;
+    const test_mod = b.createModule(.{
+        .target = libc_test.target,
+        .optimize = libc_test.optimize,
+        .link_libc = true,
+    });
+
+    test_mod.addIncludePath(libc_test.src.path(b, "common"));
+
+    test_mod.addCSourceFile(.{
+        .file = libc_test.src.path(b, "functional/dlopen.c"),
+    });
+
+    test_mod.linkLibrary(libc_test.libtest);
+
+    const exe = b.addExecutable(.{
+        .name = "dlopen",
+        .root_module = test_mod,
+    });
+
+    // Add '-rdynamic' flag
+    exe.rdynamic = true;
+
+    // Copy 'dlopen_dso.so' to same directory as 'dlopen' executable
+    const lib = installTestLibrary(libc_test, "functional/dlopen_dso.c");
+    const copy_dso = b.addRunArtifact(libc_test.copy_file);
+    copy_dso.addFileArg(lib.getEmittedBin());
+    copy_dso.addFileArg(exe.getEmittedBin().dirname().path(b, "dlopen_dso.so"));
+
+    installTestCase(libc_test, exe, .{ .run_dep = &copy_dso.step });
 }
 
 fn installTlsAlignStaticTestCase(libc_test: *const LibCTest, support: LibCImpl.Support, debug_only: bool) void {
@@ -2519,14 +2571,23 @@ fn installTlsAlignStaticTestCase(libc_test: *const LibCTest, support: LibCImpl.S
         .root_module = test_mod,
     });
 
-    installTestCase(libc_test, exe);
+    installTestCase(libc_test, exe, .{});
 }
 
-fn installTestCase(libc_test: *const LibCTest, exe: *std.Build.Step.Compile) void {
+fn installTestCase(
+    libc_test: *const LibCTest,
+    exe: *std.Build.Step.Compile,
+    options: struct {
+        run_dep: ?*std.Build.Step = null,
+    },
+) void {
     const b = libc_test.b;
     b.installArtifact(exe);
 
     const test_run = b.addRunArtifact(exe);
+
+    if (options.run_dep) |dep|
+        test_run.step.dependOn(dep);
 
     test_run.skip_foreign_checks = libc_test.skip_foreign_checks;
 
@@ -2535,4 +2596,28 @@ fn installTestCase(libc_test: *const LibCTest, exe: *std.Build.Step.Compile) voi
     test_run.expectExitCode(0);
 
     libc_test.test_step.dependOn(&test_run.step);
+}
+
+fn installTestLibrary(libc_test: *const LibCTest, library: []const u8) *std.Build.Step.Compile {
+    const b = libc_test.b;
+    const lib_mod = b.createModule(.{
+        .target = libc_test.target,
+        .optimize = libc_test.optimize,
+        .link_libc = true,
+        .pic = true,
+    });
+
+    lib_mod.addCSourceFile(.{
+        .file = libc_test.src.path(b, library),
+    });
+
+    const lib = b.addLibrary(.{
+        .name = std.fs.path.stem(library),
+        .root_module = lib_mod,
+        .linkage = .dynamic,
+    });
+
+    b.installArtifact(lib);
+
+    return lib;
 }
