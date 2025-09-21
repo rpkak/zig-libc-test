@@ -5,6 +5,7 @@ const LibCTest = struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     src: std.Build.LazyPath,
+    options_include: std.Build.LazyPath,
     libtest: *std.Build.Step.Compile,
     test_step: *std.Build.Step,
     unstable: bool,
@@ -125,6 +126,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
         .src = src,
+        .options_include = try generateOptionsInclude(b, target, src),
         .libtest = libtest,
         .test_step = test_step,
         .unstable = unstable,
@@ -171,7 +173,13 @@ pub fn build(b: *std.Build) !void {
         .wasi = .passes,
     });
     installApiTestCase(&libc_test, "api/errno.c", .passes);
-    // TODO: api/fcntl.c requires common/options.h
+    installApiTestCase(&libc_test, "api/fcntl.c", .{
+        .darwin = .unsupported,
+        .gnu = .unsupported,
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
     installApiTestCase(&libc_test, "api/fenv.c", .passes);
     installApiTestCase(&libc_test, "api/float.c", .passes);
     installApiTestCase(&libc_test, "api/fmtmsg.c", .passes);
@@ -214,7 +222,13 @@ pub fn build(b: *std.Build) !void {
         .wasi = .passes,
     });
     installApiTestCase(&libc_test, "api/libgen.c", .passes);
-    // TODO: api/limits.c requires common/options.h
+    installApiTestCase(&libc_test, "api/limits.c", .{
+        .darwin = .passes,
+        .gnu = .unsupported,
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
     installApiTestCase(&libc_test, "api/locale.c", .{
         .darwin = .passes,
         .gnu = .passes,
@@ -236,7 +250,7 @@ pub fn build(b: *std.Build) !void {
         .mingw = .unsupported,
         .wasi = .passes,
     });
-    // TODO: api/mqueue.c requires common/options.h
+    installApiTestCase(&libc_test, "api/mqueue.c", .passes);
     installApiTestCase(&libc_test, "api/ndbm.c", .passes);
     installApiTestCase(&libc_test, "api/net_if.c", .{
         .darwin = .passes,
@@ -301,7 +315,13 @@ pub fn build(b: *std.Build) !void {
         .mingw = .unsupported,
         .wasi = .passes,
     });
-    // TODO: api/sched.c requires common/options.h
+    installApiTestCase(&libc_test, "api/sched.c", .{
+        .darwin = .unsupported,
+        .gnu = .passes,
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
     installApiTestCase(&libc_test, "api/search.c", .{
         .darwin = .passes,
         .gnu = .passes,
@@ -330,7 +350,13 @@ pub fn build(b: *std.Build) !void {
         .mingw = .passes,
         .wasi = .unsupported,
     });
-    // TODO: api/spawn.c requires common/options.h
+    installApiTestCase(&libc_test, "api/spawn.c", .{
+        .darwin = .passes,
+        .gnu = .passes,
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
     installApiTestCase(&libc_test, "api/stdarg.c", .passes);
     installApiTestCase(&libc_test, "api/stdbool.c", .passes);
     installApiTestCase(&libc_test, "api/stddef.c", .passes);
@@ -370,7 +396,13 @@ pub fn build(b: *std.Build) !void {
         .mingw = .unsupported,
         .wasi = .passes,
     });
-    // TODO: api/sys_mman.c requires common/options.h
+    installApiTestCase(&libc_test, "api/sys_mman.c", .{
+        .darwin = .passes,
+        .gnu = .passes,
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
     installApiTestCase(&libc_test, "api/sys_msg.c", .{
         .darwin = .passes,
         .gnu = .passes,
@@ -413,7 +445,13 @@ pub fn build(b: *std.Build) !void {
         .mingw = .unsupported,
         .wasi = .unsupported,
     });
-    // TODO: api/sys_stat.c requires common/options.h
+    installApiTestCase(&libc_test, "api/sys_stat.c", .{
+        .darwin = .unsupported,
+        .gnu = .unsupported,
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
     installApiTestCase(&libc_test, "api/sys_statvfs.c", .{
         .darwin = .passes,
         .gnu = .passes,
@@ -499,7 +537,13 @@ pub fn build(b: *std.Build) !void {
         .mingw = .passes,
         .wasi = .unsupported,
     });
-    // TODO: api/unistd.c requires common/options.h
+    installApiTestCase(&libc_test, "api/unistd.c", .{
+        .darwin = .unsupported,
+        .gnu = .unsupported,
+        .musl = .unsupported,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
     installApiTestCase(&libc_test, "api/utmpx.c", .{
         .darwin = .passes,
         .gnu = .passes,
@@ -2362,6 +2406,37 @@ pub fn build(b: *std.Build) !void {
     // "regression/tls_get_new-dtv_dso.c"
 }
 
+/// Generate options.h based on libc-test/src/common/options.h.in
+fn generateOptionsInclude(b: *std.Build, target: std.Build.ResolvedTarget, src: std.Build.LazyPath) !std.Build.LazyPath {
+    var zig_run = b.addSystemCommand(&.{ b.graph.zig_exe, "cc", "-E", "-x", "c" });
+
+    if (!target.query.isNative()) {
+        zig_run.addArg("-target");
+        zig_run.addArg(try target.query.zigTriple(b.allocator));
+    }
+
+    zig_run.addArg("-o");
+    const preprocessed = zig_run.addOutputFileArg("options-in.h");
+
+    zig_run.addFileArg(src.path(b, "common/options.h.in"));
+
+    const exe = b.addExecutable(.{
+        .name = "generate_options",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/generate_options.zig"),
+            .target = b.graph.host,
+            .optimize = .Debug, // for error checking
+        }),
+    });
+
+    const exe_run = b.addRunArtifact(exe);
+    exe_run.addFileArg(preprocessed);
+    const include = exe_run.addOutputDirectoryArg("options-include");
+    exe_run.addArg("options.h");
+
+    return include;
+}
+
 fn installApiTestCase(libc_test: *const LibCTest, case: []const u8, support: LibCImpl.Support) void {
     if (support.shouldSkip(libc_test)) return;
 
@@ -2373,6 +2448,9 @@ fn installApiTestCase(libc_test: *const LibCTest, case: []const u8, support: Lib
     });
 
     test_mod.addIncludePath(libc_test.src.path(b, "common"));
+
+    // Add directory containing 'options.h' to include path
+    test_mod.addIncludePath(libc_test.options_include);
 
     test_mod.addCSourceFiles(.{
         .root = libc_test.src,
