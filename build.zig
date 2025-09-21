@@ -120,7 +120,288 @@ pub fn build(b: *std.Build) !void {
         .libc_impl = libc_impl,
     };
 
-    installSimpleTestCase(&libc_test, "api/main.c", .passes, false);
+    installApiTestCase(&libc_test, "api/aio.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
+    installApiTestCase(&libc_test, "api/arpa_inet.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
+    installApiTestCase(&libc_test, "api/assert.c", .passes);
+    installApiTestCase(&libc_test, "api/complex.c", .passes);
+    installApiTestCase(&libc_test, "api/cpio.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/ctype.c", .passes);
+    installApiTestCase(&libc_test, "api/dirent.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
+    installApiTestCase(&libc_test, "api/dlfcn.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/errno.c", .passes);
+    // TODO: api/fcntl.c requires common/options.h
+    installApiTestCase(&libc_test, "api/fenv.c", .passes);
+    installApiTestCase(&libc_test, "api/float.c", .passes);
+    installApiTestCase(&libc_test, "api/fmtmsg.c", .passes);
+    installApiTestCase(&libc_test, "api/fnmatch.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/ftw.c", .passes);
+    installApiTestCase(&libc_test, "api/glob.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/grp.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/iconv.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/inttypes.c", .passes);
+    installApiTestCase(&libc_test, "api/iso646.c", .passes);
+    installApiTestCase(&libc_test, "api/langinfo.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/libgen.c", .passes);
+    // TODO: api/limits.c requires common/options.h
+    installApiTestCase(&libc_test, "api/locale.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/math.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/monetary.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    // TODO: api/mqueue.c requires common/options.h
+    installApiTestCase(&libc_test, "api/ndbm.c", .passes);
+    installApiTestCase(&libc_test, "api/net_if.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/netdb.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/netinet_in.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/netinet_tcp.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/nl_types.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/poll.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
+    installApiTestCase(&libc_test, "api/pthread.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
+    installApiTestCase(&libc_test, "api/pwd.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/regex.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    // TODO: api/sched.c requires common/options.h
+    installApiTestCase(&libc_test, "api/search.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/semaphore.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/setjmp.c", .{
+        .musl = .passes,
+        .mingw = .passes,
+        .wasi = .unsupported,
+    });
+    installApiTestCase(&libc_test, "api/signal.c", .{
+        .musl = .passes,
+        .mingw = .passes,
+        .wasi = .unsupported,
+    });
+    // TODO: api/spawn.c requires common/options.h
+    installApiTestCase(&libc_test, "api/stdarg.c", .passes);
+    installApiTestCase(&libc_test, "api/stdbool.c", .passes);
+    installApiTestCase(&libc_test, "api/stddef.c", .passes);
+    installApiTestCase(&libc_test, "api/stdint.c", .passes);
+    installApiTestCase(&libc_test, "api/stdio.c", .{
+        .musl = .unsupported,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
+    installApiTestCase(&libc_test, "api/stdlib.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
+    installApiTestCase(&libc_test, "api/string.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/strings.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/sys_ipc.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    // TODO: api/sys_mman.c requires common/options.h
+    installApiTestCase(&libc_test, "api/sys_msg.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/sys_resource.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
+    installApiTestCase(&libc_test, "api/sys_select.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/sys_sem.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/sys_shm.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/sys_socket.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
+    // TODO: api/sys_stat.c requires common/options.h
+    installApiTestCase(&libc_test, "api/sys_statvfs.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/sys_time.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/sys_times.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
+    installApiTestCase(&libc_test, "api/sys_types.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
+    installApiTestCase(&libc_test, "api/sys_uio.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/sys_un.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
+    installApiTestCase(&libc_test, "api/sys_utsname.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/sys_wait.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    });
+    installApiTestCase(&libc_test, "api/syslog.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/tar.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/termios.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/tgmath.c", .passes);
+    installApiTestCase(&libc_test, "api/time.c", .{
+        .musl = .passes,
+        .mingw = .passes,
+        .wasi = .unsupported,
+    });
+    // TODO: api/unistd.c requires common/options.h
+    installApiTestCase(&libc_test, "api/utmpx.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
+    installApiTestCase(&libc_test, "api/wchar.c", .passes);
+    installApiTestCase(&libc_test, "api/wctype.c", .passes);
+    installApiTestCase(&libc_test, "api/wordexp.c", .{
+        .musl = .passes,
+        .mingw = .unsupported,
+        .wasi = .passes,
+    });
 
     installSimpleTestCase(&libc_test, "functional/argv.c", .passes, false);
     installSimpleTestCase(&libc_test, "functional/basename.c", .{
@@ -1425,6 +1706,33 @@ pub fn build(b: *std.Build) !void {
     // "regression/tls_get_new-dtv_dso.c"
 }
 
+fn installApiTestCase(libc_test: *const LibCTest, case: []const u8, support: LibCImpl.Support) void {
+    if (support.shouldSkip(libc_test)) return;
+
+    const b = libc_test.b;
+    const test_mod = b.createModule(.{
+        .target = libc_test.target,
+        .optimize = libc_test.optimize,
+        .link_libc = true,
+    });
+
+    test_mod.addIncludePath(libc_test.src.path(b, "common"));
+
+    test_mod.addCSourceFiles(.{
+        .root = libc_test.src,
+        .files = &.{ "api/main.c", case },
+    });
+
+    test_mod.linkLibrary(libc_test.libtest);
+
+    const exe = b.addExecutable(.{
+        .name = std.fs.path.stem(case),
+        .root_module = test_mod,
+    });
+
+    installTestCase(libc_test, exe);
+}
+
 fn installSimpleTestCase(libc_test: *const LibCTest, case: []const u8, support: LibCImpl.Support, debug_only: bool) void {
     if (support.shouldSkip(libc_test)) return;
     if (debug_only and libc_test.optimize != .Debug) return;
@@ -1445,7 +1753,7 @@ fn installSimpleTestCase(libc_test: *const LibCTest, case: []const u8, support: 
     test_mod.linkLibrary(libc_test.libtest);
 
     const exe = b.addExecutable(.{
-        .name = case[(std.mem.lastIndexOfScalar(u8, case, '/') orelse @panic("Invalid name")) + 1 .. case.len - 2],
+        .name = std.fs.path.stem(case),
         .root_module = test_mod,
     });
 
