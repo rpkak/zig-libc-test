@@ -916,6 +916,13 @@ pub fn build(b: *std.Build) !void {
         .mingw = .passes,
         .wasi = .unsupported,
     }, false);
+    installTlsAlignTestCase(&libc_test, .{
+        .darwin = .passes,
+        .gnu = .unstable,
+        .musl = .unstable,
+        .mingw = .passes,
+        .wasi = .unsupported,
+    }, false);
     installTlsAlignStaticTestCase(&libc_test, .passes, false);
     installSimpleTestCase(&libc_test, "functional/tls_init.c", .{
         .darwin = .passes,
@@ -2413,7 +2420,6 @@ pub fn build(b: *std.Build) !void {
     installSimpleTestCase(&libc_test, "regression/wcsstr-false-negative.c", .passes, false);
 
     // TODO
-    // "functional/tls_align.c"
     // "functional/tls_align_dlopen.c"
     // "functional/tls_align_dso.c"
     // "functional/tls_init_dlopen.c"
@@ -2544,6 +2550,36 @@ fn installDlopenTestCase(libc_test: *const LibCTest, support: LibCImpl.Support, 
     copy_dso.addFileArg(exe.getEmittedBin().dirname().path(b, "dlopen_dso.so"));
 
     installTestCase(libc_test, exe, .{ .run_dep = &copy_dso.step });
+}
+
+fn installTlsAlignTestCase(libc_test: *const LibCTest, support: LibCImpl.Support, debug_only: bool) void {
+    if (support.shouldSkip(libc_test)) return;
+    if (debug_only and libc_test.optimize != .Debug) return;
+
+    const b = libc_test.b;
+    const test_mod = b.createModule(.{
+        .target = libc_test.target,
+        .optimize = libc_test.optimize,
+        .link_libc = true,
+    });
+
+    test_mod.addIncludePath(libc_test.src.path(b, "common"));
+
+    test_mod.addCSourceFile(.{
+        .file = libc_test.src.path(b, "functional/tls_align.c"),
+    });
+
+    test_mod.linkLibrary(libc_test.libtest);
+
+    // Link against 'tls_align_dso.so'
+    test_mod.linkLibrary(installTestLibrary(libc_test, "functional/tls_align_dso.c"));
+
+    const exe = b.addExecutable(.{
+        .name = "tls_align",
+        .root_module = test_mod,
+    });
+
+    installTestCase(libc_test, exe, .{});
 }
 
 fn installTlsAlignStaticTestCase(libc_test: *const LibCTest, support: LibCImpl.Support, debug_only: bool) void {
