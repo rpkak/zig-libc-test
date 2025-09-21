@@ -924,6 +924,20 @@ pub fn build(b: *std.Build) !void {
         .wasi = .unsupported,
     }, false);
     installTlsAlignStaticTestCase(&libc_test, .passes, false);
+    installTlsDlopenTestCase(&libc_test, "functional/tls_align_dlopen.c", "functional/tls_align_dso.c", .{
+        .darwin = .passes,
+        .gnu = .passes,
+        .musl = .unstable,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    }, false);
+    installTlsDlopenTestCase(&libc_test, "functional/tls_init_dlopen.c", "functional/tls_init_dso.c", .{
+        .darwin = .passes,
+        .gnu = .passes,
+        .musl = .unstable,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    }, false);
     installSimpleTestCase(&libc_test, "functional/tls_init.c", .{
         .darwin = .passes,
         .gnu = .passes,
@@ -2409,6 +2423,13 @@ pub fn build(b: *std.Build) !void {
         .mingw = .unsupported,
         .wasi = .unsupported,
     }, false);
+    installTlsGetNewDtvTestCase(&libc_test, .{
+        .darwin = .unsupported,
+        .gnu = .passes,
+        .musl = .unstable,
+        .mingw = .unsupported,
+        .wasi = .unsupported,
+    }, false);
     installSimpleTestCase(&libc_test, "regression/uselocale-0.c", .{
         .darwin = .passes,
         .gnu = .passes,
@@ -2418,14 +2439,6 @@ pub fn build(b: *std.Build) !void {
     }, false);
     installSimpleTestCase(&libc_test, "regression/wcsncpy-read-overflow.c", .passes, false);
     installSimpleTestCase(&libc_test, "regression/wcsstr-false-negative.c", .passes, false);
-
-    // TODO
-    // "functional/tls_align_dlopen.c"
-    // "functional/tls_align_dso.c"
-    // "functional/tls_init_dlopen.c"
-    // "functional/tls_init_dso.c"
-    // "regression/tls_get_new-dtv.c"
-    // "regression/tls_get_new-dtv_dso.c"
 }
 
 /// Generate options.h based on libc-test/src/common/options.h.in
@@ -2610,10 +2623,90 @@ fn installTlsAlignStaticTestCase(libc_test: *const LibCTest, support: LibCImpl.S
     installTestCase(libc_test, exe, .{});
 }
 
+fn installTlsDlopenTestCase(
+    libc_test: *const LibCTest,
+    case: []const u8,
+    library: []const u8,
+    support: LibCImpl.Support,
+    debug_only: bool,
+) void {
+    if (support.shouldSkip(libc_test)) return;
+    if (debug_only and libc_test.optimize != .Debug) return;
+
+    const b = libc_test.b;
+
+    const test_mod = b.createModule(.{
+        .target = libc_test.target,
+        .optimize = libc_test.optimize,
+        .link_libc = true,
+    });
+
+    test_mod.addIncludePath(libc_test.src.path(b, "common"));
+
+    test_mod.addCSourceFile(.{
+        .file = libc_test.src.path(b, case),
+    });
+
+    test_mod.linkLibrary(libc_test.libtest);
+
+    const exe = b.addExecutable(.{
+        .name = std.fs.path.stem(case),
+        .root_module = test_mod,
+    });
+
+    // Copy 'tls_align_dso.so' to '<cache directory>/src/functional'
+    const lib = installTestLibrary(libc_test, library);
+    const copy_dso = b.addRunArtifact(libc_test.copy_file);
+    copy_dso.addFileArg(lib.getEmittedBin());
+    const dso = copy_dso.addOutputFileArg(b.fmt("src/functional/{s}.so", .{std.fs.path.stem(library)}));
+
+    // Use <cache directory> as the working directory for 'tls_align_dlopen'
+    const cwd = dso.dirname().dirname().dirname();
+
+    installTestCase(libc_test, exe, .{ .cwd = cwd });
+}
+
+fn installTlsGetNewDtvTestCase(libc_test: *const LibCTest, support: LibCImpl.Support, debug_only: bool) void {
+    if (support.shouldSkip(libc_test)) return;
+    if (debug_only and libc_test.optimize != .Debug) return;
+
+    const b = libc_test.b;
+
+    const test_mod = b.createModule(.{
+        .target = libc_test.target,
+        .optimize = libc_test.optimize,
+        .link_libc = true,
+    });
+
+    test_mod.addIncludePath(libc_test.src.path(b, "common"));
+
+    test_mod.addCSourceFile(.{
+        .file = libc_test.src.path(b, "regression/tls_get_new-dtv.c"),
+    });
+
+    test_mod.addRPathSpecial("$ORIGIN");
+
+    test_mod.linkLibrary(libc_test.libtest);
+
+    const exe = b.addExecutable(.{
+        .name = "tls_get_new-dtv",
+        .root_module = test_mod,
+    });
+
+    // Copy 'tls_get_new-dtv_dso.so' to same directory as 'tls_get_new-dtv' executable
+    const lib = installTestLibrary(libc_test, "regression/tls_get_new-dtv_dso.c");
+    const copy_dso = b.addRunArtifact(libc_test.copy_file);
+    copy_dso.addFileArg(lib.getEmittedBin());
+    copy_dso.addFileArg(exe.getEmittedBin().dirname().path(b, "tls_get_new-dtv_dso.so"));
+
+    installTestCase(libc_test, exe, .{ .run_dep = &copy_dso.step });
+}
+
 fn installTestCase(
     libc_test: *const LibCTest,
     exe: *std.Build.Step.Compile,
     options: struct {
+        cwd: ?std.Build.LazyPath = null,
         run_dep: ?*std.Build.Step = null,
     },
 ) void {
@@ -2621,6 +2714,9 @@ fn installTestCase(
     b.installArtifact(exe);
 
     const test_run = b.addRunArtifact(exe);
+
+    if (options.cwd) |cwd|
+        test_run.setCwd(cwd);
 
     if (options.run_dep) |dep|
         test_run.step.dependOn(dep);
