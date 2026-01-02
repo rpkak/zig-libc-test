@@ -12,6 +12,8 @@ const LibCTest = struct {
     libc_impl: LibCImpl,
 };
 
+const cflags = &.{"-fno-builtin"};
+
 const LibCImpl = enum {
     musl,
     mingw,
@@ -90,6 +92,7 @@ pub fn build(b: *std.Build) !void {
     libtest_mod.addCSourceFiles(.{
         .root = src.path(b, "common"),
         .files = libtest_c_source_files.items,
+        .flags = cflags,
     });
 
     const libtest = b.addLibrary(.{
@@ -479,6 +482,7 @@ fn installSimpleTestCase(libc_test: *const LibCTest, case: []const u8, support: 
 
     test_mod.addCSourceFile(.{
         .file = libc_test.src.path(b, case),
+        .flags = cflags,
     });
 
     test_mod.linkLibrary(libc_test.libtest);
@@ -507,6 +511,7 @@ fn installTlsAlignStaticTestCase(libc_test: *const LibCTest, support: LibCImpl.S
     test_mod.addCSourceFiles(.{
         .root = libc_test.src.path(b, "functional"),
         .files = &.{ "tls_align.c", "tls_align_dso.c" },
+        .flags = cflags,
     });
 
     test_mod.linkLibrary(libc_test.libtest);
