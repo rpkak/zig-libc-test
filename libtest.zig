@@ -19,7 +19,7 @@ export fn t_shuffle(p: [*]u64, n: usize) void {
 }
 
 fn testMapLength(length: usize) !bool {
-    const memory = posix.mmap(null, length, posix.PROT.NONE, .{ .TYPE = .PRIVATE, .ANONYMOUS = true }, -1, 0) catch |err| return switch (err) {
+    const memory = posix.mmap(null, length, .{}, .{ .TYPE = .PRIVATE, .ANONYMOUS = true }, -1, 0) catch |err| return switch (err) {
         error.OutOfMemory => false,
         else => err,
     };
@@ -50,7 +50,7 @@ fn t_vmfill(p: [*][*]align(std.heap.page_size_min) u8, n: [*]usize, len: c_int) 
             }
         }
 
-        const memory = posix.mmap(null, length, posix.PROT.NONE, .{ .TYPE = .PRIVATE, .ANONYMOUS = true }, -1, 0) catch return -1;
+        const memory = posix.mmap(null, length, .{}, .{ .TYPE = .PRIVATE, .ANONYMOUS = true }, -1, 0) catch return -1;
         if (i < len) {
             p[i] = memory.ptr;
             n[i] = memory.len;
